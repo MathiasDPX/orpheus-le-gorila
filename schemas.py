@@ -2,6 +2,10 @@ from datetime import datetime
 from enum import Enum
 
 
+def _formatBoxdDate(date: str):
+    return datetime.fromisoformat(date.replace("Z", "+00:00"))
+
+
 class AccountStatus(Enum):
     active = "Active"
     memorialized = "memorialized"
@@ -61,6 +65,14 @@ class Image:
         self.sizes = [ImageSize(size) for size in data["sizes"]]
 
 
+class Review:
+    def __init__(self, data):
+        self.lbml = data["lbml"]
+        self.text = data["text"]
+        self.whenReviewed = _formatBoxdDate(data["whenReviewed"])
+        self.containsSpoilers = data["containsSpoilers"]
+
+
 class Link:
     def __init__(self, data):
         self.type = LinkType(data["type"])
@@ -103,7 +115,7 @@ class Film:
 
 class AbstractActivity:
     def __init__(self, whenCreated, member, **kwargs):
-        self.whenCreated = datetime.fromisoformat(whenCreated.replace("Z", "+00:00"))
+        self.whenCreated = _formatBoxdDate(whenCreated)
         self.member = MemberSummary(member)
 
 
@@ -117,6 +129,7 @@ class DiaryEntryActivity(AbstractActivity):
         self.rating: int = diaryEntry["rating"]
         self.like: bool = diaryEntry["like"]
         self.film = Film(diaryEntry["film"])
+        self.review = Review(diaryEntry["review"]) if "review" in diaryEntry else None
 
 
 class WatchlistActivity(AbstractActivity):
@@ -128,4 +141,4 @@ class WatchlistActivity(AbstractActivity):
 class FollowActivity(AbstractActivity):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.followed: MemberSummary = kwargs["followed"]
+        self.followed: MemberSummary = MemberSummary(kwargs["followed"])

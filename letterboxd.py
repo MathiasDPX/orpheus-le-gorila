@@ -68,16 +68,14 @@ class LetterboxdClient:
         
         data = resp.json()
         
-        import json
-        with open("data.json", "w+", encoding="utf-8") as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
-        
         activities = []
         for item in data['items']:
             if item['type'] == "WatchlistActivity":
                 activities.append(WatchlistActivity(**item))
             elif item['type'] == "DiaryEntryActivity":
                 activities.append(DiaryEntryActivity(**item))
+            elif item['type'] == "FollowActivity":
+                activities.append(FollowActivity(**item))
         
         return activities
 
@@ -107,3 +105,5 @@ if __name__ == "__main__":
             print(f"{member.displayName} added {activity.film.fullDisplayName or activity.film.name} to their watchlist")
         elif type(activity) is DiaryEntryActivity:
             print(f"{member.displayName} rate {activity.film.fullDisplayName or activity.film.name} {activity.rating} stars")
+            if activity.review is not None:
+                print(activity.review.text)
