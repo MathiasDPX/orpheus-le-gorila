@@ -2,4 +2,5 @@ pytz
 duckdb
 authlib
 slack_bolt
+apscheduler
 python-dotenv

@@ -6,6 +6,7 @@ from slack_bolt import App
 from dotenv import load_dotenv
 from letterboxd import LetterboxdClient
 from slack_bolt.adapter.socket_mode import SocketModeHandler
+from apscheduler.schedulers.background import BackgroundScheduler
 from schemas import FollowActivity, WatchlistActivity, DiaryEntryActivity
 
 load_dotenv()
@@ -155,7 +156,7 @@ def star_to_text(rating):
     half_star = ":ms-half-star:" if rating % 1 == 0.5 else ""
     empty_stars = int((5 - rating) // 1) * ":ms-empty-star:"
 
-    return fullStars + halfStar + empty_stars
+    return full_stars + half_star + empty_stars
 
 
 def post_activities():
@@ -208,6 +209,11 @@ def post_activities():
 
 if __name__ == "__main__":
     init_db()
+    
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(post_activities, 'interval', minutes=30)
+    scheduler.start()
+    
     handler = SocketModeHandler(app)
     post_activities()
     handler.start()
