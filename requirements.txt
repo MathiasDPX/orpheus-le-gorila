@@ -4,3 +4,4 @@ authlib
 slack_bolt
 apscheduler
 python-dotenv
+beautifulsoup4

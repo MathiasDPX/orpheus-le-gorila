@@ -1,6 +1,7 @@
 import re
 import duckdb
 import traceback
+from utils import *
 from os import getenv
 from slack_bolt import App
 from dotenv import load_dotenv
@@ -167,7 +168,7 @@ def post_activities():
         for activity in activities:
             if activity.whenCreated < user[3]:
                 continue
-            
+
             message = None
             member = activity.member
             if type(activity) == FollowActivity:
@@ -189,11 +190,15 @@ def post_activities():
                 review = ""
                 if activity.review != None:
                     review = (
-                        activity.review.text
+                        shorten_text(activity.review.text)
                         if activity.review.containsSpoilers == False
-                        else "_This review contains spoilers_"
+                        else f"_This review contains spoilers_"
                     )
-                    review = "\n> " + review
+                    review = (
+                        "\n> "
+                        + html_to_mrkdwn(review)
+                        + f"\nRead the <https://letterboxd.com/{member.username}/film/{activity.film.sortingName}/|review>"
+                    )
 
                 message = (
                     f"{member.displayName} watched {filmName}\n{liked}{stars}{review}"
@@ -209,11 +214,11 @@ def post_activities():
 
 if __name__ == "__main__":
     init_db()
-    
+
     scheduler = BackgroundScheduler()
-    scheduler.add_job(post_activities, 'interval', minutes=30)
+    scheduler.add_job(post_activities, "interval", minutes=30)
     scheduler.start()
-    
+
     handler = SocketModeHandler(app)
     post_activities()
     handler.start()
