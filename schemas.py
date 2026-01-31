@@ -107,7 +107,7 @@ class Film:
         self.rating = data.get("rating")
         self.poster = Image(data.get("poster")) if "poster" in data else None
         self.adult = data["adult"]
-        self.links = [Link(link) for link in data["links"]]
+        self.links = {link["type"]: Link(link) for link in data["links"]}
         self.genres = [Genre(genre) for genre in data["genres"]]
         self.description = data.get("description")
         self.tagline = data.get("tagline")

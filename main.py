@@ -1,4 +1,5 @@
 import re
+import blocks
 import duckdb
 import traceback
 from utils import *
@@ -124,6 +125,11 @@ def boxd_link(ack, respond, command):
         respond(f":panic-wx: Unable to link your account!\n```{tb}```")
 
 
+@app.action("open_letterboxd")
+def handle_letterboxd_button(ack):
+    ack()
+
+
 @app.command("/boxd-toggle")
 def boxd_toggle(ack, respond, command):
     ack()
@@ -152,14 +158,6 @@ def boxd_toggle(ack, respond, command):
         )
 
 
-def star_to_text(rating):
-    full_stars = int(rating // 1) * ":ms-star:"
-    half_star = ":ms-half-star:" if rating % 1 == 0.5 else ""
-    empty_stars = int((5 - rating) // 1) * ":ms-empty-star:"
-
-    return full_stars + half_star + empty_stars
-
-
 def post_activities():
     users = get_configured_users()
     for user in users:
@@ -169,45 +167,34 @@ def post_activities():
             if activity.whenCreated < user[3]:
                 continue
 
-            message = None
+            blocks_message = None
+            text_message = None
             member = activity.member
             if type(activity) == FollowActivity:
-                message = f"{member.displayName} followed <https://letterboxd.com/{activity.followed.username}|{activity.followed.displayName}>"
+                text_message = f"{member.displayName} followed <https://letterboxd.com/{activity.followed.username}|{activity.followed.displayName}>"
+                blocks_message = blocks.from_mrkdwn(text_message)
+
             elif type(activity) == WatchlistActivity:
                 if activity.film.adult:
                     continue
 
                 filmName = activity.film.fullDisplayName or activity.film.name
-                message = f"{member.displayName} added {filmName} to {member.pronoun.possessivePronoun} watchlist"
+                text_message = f"{member.displayName} added {filmName} to {member.pronoun.possessivePronoun} watchlist"
+                blocks_message = blocks.from_mrkdwn(text_message)
+
             elif type(activity) == DiaryEntryActivity:
                 if activity.film.adult:
                     continue
 
-                filmName = activity.film.fullDisplayName or activity.film.name
+                text_message = f"{member.displayName} logged {activity.film.fullDisplayName or activity.film.name} ({activity.rating} stars)"
+                blocks_message = blocks.from_diaryentry(activity)
 
-                liked = ":ms-red-heart: " if activity.like else ""
-                stars = star_to_text(activity.rating)
-                review = ""
-                if activity.review != None:
-                    review = (
-                        shorten_text(activity.review.text)
-                        if activity.review.containsSpoilers == False
-                        else f"_This review contains spoilers_"
-                    )
-                    review = (
-                        "\n> "
-                        + html_to_mrkdwn(review)
-                        + f"\nRead the <https://letterboxd.com/{member.username}/film/{activity.film.sortingName}/|review>"
-                    )
-
-                message = (
-                    f"{member.displayName} watched {filmName}\n{liked}{stars}{review}"
-                )
-
-            if message == None:
+            if blocks_message == None:
                 continue
 
-            app.client.chat_postMessage(channel=user[2], text=message)
+            app.client.chat_postMessage(
+                channel=user[2], blocks=blocks_message, text=text_message
+            )
 
         update_lastUpdate(user[0])
 
