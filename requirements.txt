@@ -1,3 +1,4 @@
 duckdb
+authlib
 slack_bolt
 python-dotenv
