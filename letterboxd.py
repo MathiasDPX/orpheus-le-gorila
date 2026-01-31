@@ -1,4 +1,5 @@
 from authlib.integrations.requests_client import OAuth2Session
+from schemas import *
 
 
 class LetterboxdClient:
@@ -54,7 +55,7 @@ class LetterboxdClient:
 
         return resp.json()
 
-    def get_activity(self, id):
+    def get_activity(self, id) -> list[AbstractActivity]:
         resp = self.oauth.get(
             f"{self.baseurl}/member/{id}/activity",
             params={
@@ -63,10 +64,14 @@ class LetterboxdClient:
                 "where": "OwnActivity"
             }
         )
-        print(resp.headers)
         resp.raise_for_status()
         
         data = resp.json()
+        
+        import json
+        with open("data.json", "w+", encoding="utf-8") as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+        
         activities = []
         for item in data['items']:
             if item['type'] == "WatchlistActivity":
@@ -76,40 +81,6 @@ class LetterboxdClient:
         
         return activities
 
-class Film:
-    def __init__(self, data):
-        self.id = data['id']
-        self.name = data['name']
-        self.sortingName = data['sortingName']
-        self.fullDisplayName = data.get('fullDisplayName')
-        self.releaseYear = data.get('releaseYear')
-        self.runTime = data.get('runTime')
-        self.rating = data.get('rating')
-        # TODO: posters
-        self.adult = data['adult']
-        self.links = data['links']
-        self.genres = data['genres']
-        self.description = data.get('description')
-        self.tagline = data.get("tagline")
-
-class AbstractActivity:
-    def __init__(self, whenCreated):
-        self.whenCreated = whenCreated
-        
-class DiaryEntryActivity(AbstractActivity):
-    def __init__(self, whenCreated, diaryEntry, **kwargs):
-        super().__init__(whenCreated)
-        
-        self.id = diaryEntry['id']
-        self.name = diaryEntry['name']
-        self.rating = diaryEntry['rating']
-        self.like = diaryEntry['like']
-        self.film = Film(diaryEntry['film'])
-        
-class WatchlistActivity(AbstractActivity):
-    def __init__(self, whenCreated, film, **kwargs):
-        super().__init__(whenCreated)
-        self.film = Film(film)
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
@@ -127,11 +98,12 @@ if __name__ == "__main__":
     )
 
     uid = client.get_id_by_username(username)
-    print("id:", uid)
     activities = client.get_activity(uid)
     
     for activity in activities:
+        
+        member = activity.member
         if type(activity) is WatchlistActivity:
-            print(f"{username} added {activity.film.fullDisplayName or activity.film.name} to their watchlist")
+            print(f"{member.displayName} added {activity.film.fullDisplayName or activity.film.name} to their watchlist")
         elif type(activity) is DiaryEntryActivity:
-            print(f"{username} rate {activity.film.fullDisplayName or activity.film.name} {activity.rating} stars")
+            print(f"{member.displayName} rate {activity.film.fullDisplayName or activity.film.name} {activity.rating} stars")
