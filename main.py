@@ -20,7 +20,7 @@ boxd_client = LetterboxdClient(
     username=getenv("BOXD_USERNAME"),
     password=getenv("BOXD_PASSWORD"),
 )
-DB_PATH = "database.db"
+DB_PATH = getenv("DATABASE_PATH", "database.db")
 
 
 def init_db():
