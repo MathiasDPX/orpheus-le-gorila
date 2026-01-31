@@ -22,9 +22,10 @@ DB_PATH = "database.db"
 def init_db():
     with duckdb.connect(DB_PATH) as conn:
         conn.execute(
-            """CREATE TABLE IF NOT EXISTS linked_accounts (
+            """CREATE TABLE IF NOT EXISTS accounts (
                 slack_id TEXT PRIMARY KEY,
-                boxd_username TEXT UNIQUE NOT NULL
+                boxd_username TEXT UNIQUE NOT NULL,
+                channel TEXT UNIQUE
             )"""
         )
 
@@ -32,7 +33,7 @@ def init_db():
 def get_boxd_by_slack(slack_id: str):
     with duckdb.connect(DB_PATH) as conn:
         row = conn.execute(
-            "SELECT boxd_username FROM linked_accounts WHERE slack_id = ?", [slack_id]
+            "SELECT boxd_username FROM accounts WHERE slack_id = ?", [slack_id]
         ).fetchone()
         return row[0] if row else None
 
@@ -41,7 +42,7 @@ def link_account(slack_id: str, boxd_username: str):
     with duckdb.connect(DB_PATH) as con:
         con.execute(
             """
-            INSERT INTO linked_accounts (slack_id, boxd_username)
+            INSERT INTO accounts (slack_id, boxd_username)
             VALUES (?, ?)
             ON CONFLICT (slack_id)
             DO UPDATE SET boxd_username = EXCLUDED.boxd_username
@@ -50,11 +51,20 @@ def link_account(slack_id: str, boxd_username: str):
         )
 
 
+def get_channel(slack_id):
+    with duckdb.connect(DB_PATH) as con:
+        row = con.execute("SELECT channel FROM accounts WHERE slack_id=?", [slack_id]).fetchone()
+        return row[0] if row else None
+    
+def set_channel(slack_id, channel):
+    with duckdb.connect(DB_PATH) as con:
+        con.execute("UPDATE accounts SET channel=? WHERE slack_id=?", [channel, slack_id])
+
 BOXD_USERNAME_PATTERN = re.compile(r"^[a-zA-Z0-9_]{2,15}$")
 
 
 @app.command("/boxd-link")
-def repeat_text(ack, respond, command):
+def boxd_link(ack, respond, command):
     ack()
     username: str = command["text"]
     username = username.strip()
@@ -87,6 +97,30 @@ def repeat_text(ack, respond, command):
         tb = traceback.format_exc()
         respond(f":panic-wx: Unable to link your account!\n```{tb}```")
 
+
+@app.command("/boxd-toggle")
+def boxd_toggle(ack, respond, command):
+    ack()
+    state: str = command["text"].lower()
+    slackid = command['user_id']
+    
+    if state == "off":
+        set_channel(slackid, None)
+        respond("Letterboxd logging disabled")
+    elif state == "on":
+        boxd_id = get_boxd_by_slack(slackid)
+        if boxd_id == None:
+            respond("Link your Letterboxd account before enabling logging\nUsing `/boxd-link [username]`")
+            return
+        
+        try:
+            set_channel(slackid, command['channel_id'])
+            respond("Enabled Letterboxd logging")
+        except duckdb.ConstraintException:
+            respond("This channel is already used by someone else")
+    else:
+        respond("Unknown command, make sure to use on or off\nExample: `/boxd-toggle on`")
+    
 
 if __name__ == "__main__":
     init_db()
