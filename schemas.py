@@ -114,9 +114,10 @@ class Film:
 
 
 class AbstractActivity:
-    def __init__(self, whenCreated, member, **kwargs):
+    def __init__(self, whenCreated, member, type, **kwargs):
         self.whenCreated = _formatBoxdDate(whenCreated)
         self.member = MemberSummary(member)
+        self.type = type
 
 
 class DiaryEntryActivity(AbstractActivity):

@@ -30,7 +30,8 @@ def init_db():
                 slack_id TEXT PRIMARY KEY,
                 boxd_username TEXT UNIQUE NOT NULL,
                 channel TEXT UNIQUE DEFAULT NULL,
-                lastUpdate TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                lastUpdate TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                events VARCHAR[] DEFAULT ['WatchlistActivity', 'DiaryEntryActivity']
             )"""
         )
 
@@ -55,6 +56,11 @@ def link_account(slack_id: str, boxd_username: str):
             [slack_id, boxd_username],
         )
 
+def update_events_subscribe(events, slackid):
+    with duckdb.connect(DB_PATH) as con:
+        con.execute(
+            "UPDATE accounts SET events=? WHERE slack_id=?", [events, slackid]
+        )
 
 def get_configured_users():
     with duckdb.connect(DB_PATH) as conn:
@@ -88,6 +94,26 @@ def update_lastUpdate(slack_id):
 
 
 BOXD_USERNAME_PATTERN = re.compile(r"^[a-zA-Z0-9_]{2,15}$")
+
+
+@app.command("/boxd-events")
+def boxd_events(ack, respond, command):
+    ack()
+
+    slackid = command["user_id"]
+    boxd_id = get_boxd_by_slack(slackid)
+
+    if boxd_id is None:
+        respond(
+            "You need to link your Letterboxd account before using this\nUse: `/boxd-link [username]`"
+        )
+        return
+
+    channel = get_channel(slackid)
+
+    app.client.views_open(
+        trigger_id=command["trigger_id"], view=blocks.modal_events(channel)
+    )
 
 
 @app.command("/boxd-link")
@@ -124,6 +150,19 @@ def boxd_link(ack, respond, command):
         tb = traceback.format_exc()
         respond(f":panic-wx: Unable to link your account!\n```{tb}```")
 
+
+@app.action("events-change")
+def handle_some_action(ack, body, logger):
+    ack()
+    
+    selected_options = []
+    for action in body["actions"]:
+        if action["action_id"] != "events-change":
+            continue
+
+        selected_options = [option['value'] for option in action["selected_options"]]
+        
+    update_events_subscribe(selected_options, body['user_id'])
 
 @app.action("open_letterboxd")
 def handle_letterboxd_button(ack):
@@ -170,11 +209,12 @@ def post_activities():
             blocks_message = None
             text_message = None
             member = activity.member
-            if type(activity) == FollowActivity:
+            subscribed_events = user[4]
+            if type(activity) == FollowActivity and "FollowActivity" in subscribed_events:
                 text_message = f"{member.displayName} followed <https://letterboxd.com/{activity.followed.username}|{activity.followed.displayName}>"
                 blocks_message = blocks.from_mrkdwn(text_message)
 
-            elif type(activity) == WatchlistActivity:
+            elif type(activity) == WatchlistActivity and "WatchlistActivity" in subscribed_events:
                 if activity.film.adult:
                     continue
 
@@ -182,7 +222,7 @@ def post_activities():
                 text_message = f"{member.displayName} added {filmName} to {member.pronoun.possessivePronoun} watchlist"
                 blocks_message = blocks.from_mrkdwn(text_message)
 
-            elif type(activity) == DiaryEntryActivity:
+            elif type(activity) == DiaryEntryActivity and "DiaryEntryActivity" in subscribed_events:
                 if activity.film.adult:
                     continue
 
