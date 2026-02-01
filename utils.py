@@ -1,7 +1,16 @@
+"""
+Utility functions used across the project
+"""
+
 from bs4 import BeautifulSoup
 
 
-def star_to_text(rating):
+def star_to_text(rating: int):
+    """
+    Convert the rating into text
+
+    :param rating: Description
+    """
     full_stars = int(rating // 1) * ":ms-star:"
     half_star = ":ms-half-star:" if rating % 1 == 0.5 else ""
     empty_stars = int((5 - rating) // 1) * ":ms-empty-star:"
@@ -22,6 +31,15 @@ def shorten_text(text):
 
 
 def html_to_mrkdwn(html: str) -> str:
+    """
+    Convert HTML from Letterboxd review to Mrkdwn
+
+    :param html: html from review
+    :type html: str
+    :return: mrkdwn to use in slack
+    :rtype: str
+    """
+
     soup = BeautifulSoup(html, "html.parser")
 
     # Line breaks
@@ -49,20 +67,3 @@ def html_to_mrkdwn(html: str) -> str:
         bq.replace_with(quoted)
 
     return soup.get_text()
-
-
-if __name__ == "__main__":
-    print("HTML to Mrkdwn")
-    print("---")
-    print(
-        html_to_mrkdwn(
-            '<p>It was <b>fun</b> to <em>watch</em></p>\n\n<blockquote>67</blockquote>\nthis made me laugh\n\n<a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">Rickroll</a>'
-        )
-    )
-
-    print(
-        "---\n"
-        + shorten_text(
-            "Firstly, great performances from the cast, especially Jesse Plemons. Emma definitely deserved her Oscar nomination for this film and Aidan was amazing. I thought it was a great commentary on conspiracy theorists, it was actually a bit fun but also extremely sad at the same time. Teddy and Don’s relationship was wonderful but also heartbreaking. Teddy going deeper and deeper into this pit, as Michelle said, dragging Don with him. Not seeing how he was hurting his own cousin. I quite liked the twist ending too, and the end sequence was simple but brilliant. Overall a great film that I definitely recommend."
-        )
-    )
