@@ -1,13 +1,33 @@
-from schemas import DiaryEntryActivity
-from utils import *
+"""
+Generate Slack blocks
+"""
+
 import os
+from schemas import DiaryEntryActivity
+from utils import star_to_text, html_to_mrkdwn, shorten_text
 
 
 def from_mrkdwn(mrkdwn):
+    """
+    Create mrkdwn blocks from plain text
+
+    :param mrkdwn: Block content
+    :return: List containing a Slack section block with mrkdwn text
+    :rtype: list[dict]
+    """
     return [{"type": "section", "text": {"type": "mrkdwn", "text": mrkdwn}}]
 
 
 def from_diaryentry(activity: DiaryEntryActivity):
+    """
+    Create blocks from Diary Entry Activity
+
+    :param activity: Activity to use
+    :type activity: DiaryEntryActivity
+    :return: List of Slack blocks (section with film info and actions with Letterboxd button)
+    :rtype: list[dict]
+    """
+
     member = activity.member
     film = activity.film
 
@@ -17,7 +37,7 @@ def from_diaryentry(activity: DiaryEntryActivity):
     film_name = film.fullDisplayName or film.name
 
     review = ""
-    if activity.review != None:
+    if activity.review is not None:
         if activity.review.containsSpoilers:
             review = "_This review contains spoilers_"
         else:
@@ -25,7 +45,7 @@ def from_diaryentry(activity: DiaryEntryActivity):
             review = shorten_text(review)
 
     # Some magic cuz sometime the sortingName isnt the name in the URL
-    sortingName = os.path.basename(film.links["letterboxd"].url.strip("/"))
+    sorting_name = os.path.basename(film.links["letterboxd"].url.strip("/"))
 
     return [
         {
@@ -53,7 +73,7 @@ def from_diaryentry(activity: DiaryEntryActivity):
                         "text": ":boxd: See on Letterboxd",
                         "emoji": True,
                     },
-                    "url": f"https://letterboxd.com/{member.username}/film/{sortingName}/",
+                    "url": f"https://letterboxd.com/{member.username}/film/{sorting_name}/",
                 }
             ],
         },
@@ -61,6 +81,13 @@ def from_diaryentry(activity: DiaryEntryActivity):
 
 
 def modal_events(channelid):
+    """
+    Create a modal to choose which events are posted
+
+    :param channelid: User's personal channel (can be None)
+    :return: Slack modal object with event checkboxes
+    :rtype: dict
+    """
     text = "A message will be sent for each of these activities:"
     if channelid is not None:
         text = f"A message will be sent in <#{channelid}> for each of these activities:"
@@ -119,23 +146,34 @@ def modal_events(channelid):
     }
 
 
-_ALL_EVENTS = [
-    "WatchlistActivity",
-    "DiaryEntryActivity",
-    "FollowActivity"
-]
+_ALL_EVENTS = ["WatchlistActivity", "DiaryEntryActivity", "FollowActivity"]
+
 
 def modal_info(user):
+    """
+    Create a modal containing user's informations
+    
+    :param user: User tuple (slack_id, letterboxd_id, channel_id, ?, events_list)
+    :return: Slack modal object with user information and event status
+    :rtype: dict
+    """
     infos = [
         f"Slack ID: `{user[0]}` <@{user[0]}>",
-        f"Letterboxd ID: `{user[1]}`",# <https://letterboxd.com/{}/|{}>",
-        f"Channel: `{user[2]}` <#{user[2]}>" if user[2] else "Channel: None"
+        f"Letterboxd ID: `{user[1]}`",  # <https://letterboxd.com/{}/|{}>",
+        f"Channel: `{user[2]}` <#{user[2]}>" if user[2] else "Channel: None",
     ]
     infos = "\n".join(infos)
-    
-    events = [f":ms-tick-box:  {event}" if event in user[4] else f":ms-large-white-square:  {event}" for event in _ALL_EVENTS]
+
+    events = [
+        (
+            f":ms-tick-box:  {event}"
+            if event in user[4]
+            else f":ms-large-white-square:  {event}"
+        )
+        for event in _ALL_EVENTS
+    ]
     events = "\n".join(events)
-    
+
     return {
         "type": "modal",
         "title": {"type": "plain_text", "text": "Orpheus Le Gorila", "emoji": True},
