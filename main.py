@@ -121,9 +121,9 @@ def boxd_events(ack, respond, command):
     ack()
 
     slackid = command["user_id"]
-    boxd_id = get_boxd_by_slack(slackid)
+    user = get_user(slackid)
 
-    if boxd_id is None:
+    if user is None:
         respond(
             "You need to link your Letterboxd account before using this\nUse: `/boxd-link [username]`"
         )
@@ -132,7 +132,7 @@ def boxd_events(ack, respond, command):
     channel = get_channel(slackid)
 
     app.client.views_open(
-        trigger_id=command["trigger_id"], view=blocks.modal_events(channel)
+        trigger_id=command["trigger_id"], view=blocks.modal_events(channel, user[4])
     )
 
 
@@ -171,7 +171,7 @@ def boxd_link(ack, respond, command):
 
 
 @app.action("events-change")
-def handle_some_action(ack, body, logger):
+def handle_events_change(ack, body, logger):
     ack()
     
     selected_options = []
@@ -181,7 +181,8 @@ def handle_some_action(ack, body, logger):
 
         selected_options = [option['value'] for option in action["selected_options"]]
         
-    update_events_subscribe(selected_options, body['user_id'])
+    user_id = body['user']['id']
+    update_events_subscribe(selected_options, user_id)
 
 @app.action("open_letterboxd")
 def handle_letterboxd_button(ack):

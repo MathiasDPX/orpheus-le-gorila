@@ -80,7 +80,7 @@ def from_diaryentry(activity: DiaryEntryActivity):
     ]
 
 
-def modal_events(channelid):
+def modal_events(channelid, default_events):
     """
     Create a modal to choose which events are posted
 
@@ -91,6 +91,39 @@ def modal_events(channelid):
     text = "A message will be sent for each of these activities:"
     if channelid is not None:
         text = f"A message will be sent in <#{channelid}> for each of these activities:"
+
+    events = {
+        "WatchlistActivity": {
+            "text": {
+                "type": "mrkdwn",
+                "text": "*Watchlist Activity*",
+            },
+            "description": {
+                "type": "mrkdwn",
+                "text": "When you add a film to your watchlist",
+            },
+            "value": "WatchlistActivity",
+        },
+        "FollowActivity": {
+            "text": {"type": "mrkdwn", "text": "*Follow Activity*"},
+            "description": {
+                "type": "mrkdwn",
+                "text": "When you follow someone",
+            },
+            "value": "FollowActivity",
+        },
+        "DiaryEntryActivity": {
+            "text": {
+                "type": "mrkdwn",
+                "text": "*Diary Entry Activity*",
+            },
+            "description": {
+                "type": "mrkdwn",
+                "text": "When you log a film",
+            },
+            "value": "DiaryEntryActivity",
+        },
+    }
 
     return {
         "type": "modal",
@@ -106,38 +139,8 @@ def modal_events(channelid):
                 "elements": [
                     {
                         "type": "checkboxes",
-                        "options": [
-                            {
-                                "text": {"type": "mrkdwn", "text": "*Follow Activity*"},
-                                "description": {
-                                    "type": "mrkdwn",
-                                    "text": "When you follow someone",
-                                },
-                                "value": "FollowActivity",
-                            },
-                            {
-                                "text": {
-                                    "type": "mrkdwn",
-                                    "text": "*Watchlist Activity*",
-                                },
-                                "description": {
-                                    "type": "mrkdwn",
-                                    "text": "When you add a film to your watchlist",
-                                },
-                                "value": "WatchlistActivity",
-                            },
-                            {
-                                "text": {
-                                    "type": "mrkdwn",
-                                    "text": "*Diary Entry Activity*",
-                                },
-                                "description": {
-                                    "type": "mrkdwn",
-                                    "text": "When you log a film",
-                                },
-                                "value": "DiaryEntryActivity",
-                            },
-                        ],
+                        "initial_options": [events[event] for event in default_events],
+                        "options": list(events.values()),
                         "action_id": "events-change",
                     }
                 ],
@@ -152,7 +155,7 @@ _ALL_EVENTS = ["WatchlistActivity", "DiaryEntryActivity", "FollowActivity"]
 def modal_info(user):
     """
     Create a modal containing user's informations
-    
+
     :param user: User tuple (slack_id, letterboxd_id, channel_id, ?, events_list)
     :return: Slack modal object with user information and event status
     :rtype: dict
