@@ -239,7 +239,7 @@ def post_activities():
                     continue
 
                 filmName = activity.film.full_display_name or activity.film.name
-                text_message = f"{member.display_name} added {filmName} to {member.pronoun.possessivePronoun} watchlist"
+                text_message = f"{member.display_name} added {filmName} to {member.pronoun.possessive_pronoun} watchlist"
                 blocks_message = blocks.from_mrkdwn(text_message)
 
             elif isinstance(activity, DiaryEntryActivity) and "DiaryEntryActivity" in subscribed_events:
