@@ -59,11 +59,12 @@ def from_diaryentry(activity: DiaryEntryActivity):
         },
     ]
 
+
 def modal_events(channelid):
     text = "A message will be sent for each of these activities:"
     if channelid is not None:
         text = f"A message will be sent in <#{channelid}> for each of these activities:"
-        
+
     return {
         "type": "modal",
         "title": {"type": "plain_text", "text": "Orpheus Le Gorilla", "emoji": True},
@@ -71,10 +72,7 @@ def modal_events(channelid):
         "blocks": [
             {
                 "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": text
-                },
+                "text": {"type": "mrkdwn", "text": text},
             },
             {
                 "type": "actions",
@@ -117,5 +115,38 @@ def modal_events(channelid):
                     }
                 ],
             },
+        ],
+    }
+
+
+_ALL_EVENTS = [
+    "WatchlistActivity",
+    "DiaryEntryActivity",
+    "FollowActivity"
+]
+
+def modal_info(user):
+    infos = [
+        f"Slack ID: `{user[0]}` <@{user[0]}>",
+        f"Letterboxd ID: `{user[1]}`",# <https://letterboxd.com/{}/|{}>",
+        f"Channel: `{user[2]}` <#{user[2]}>" if user[2] else "Channel: None"
+    ]
+    infos = "\n".join(infos)
+    
+    events = [f":ms-tick-box:  {event}" if event in user[4] else f":ms-large-white-square:  {event}" for event in _ALL_EVENTS]
+    events = "\n".join(events)
+    
+    return {
+        "type": "modal",
+        "title": {"type": "plain_text", "text": "Orpheus Le Gorila", "emoji": True},
+        "close": {"type": "plain_text", "text": "Close", "emoji": True},
+        "blocks": [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": infos + "\n\nEvents:\n" + events,
+                },
+            }
         ],
     }

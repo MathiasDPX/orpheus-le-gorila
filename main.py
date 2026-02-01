@@ -44,6 +44,13 @@ def get_boxd_by_slack(slack_id: str):
         return row[0] if row else None
 
 
+def get_user(slack_id: str):
+    with duckdb.connect(DB_PATH) as conn:
+        row = conn.execute(
+            "SELECT * FROM accounts WHERE slack_id = ?", [slack_id]
+        ).fetchone()
+        return row if row else None
+
 def link_account(slack_id: str, boxd_username: str):
     with duckdb.connect(DB_PATH) as con:
         con.execute(
@@ -95,6 +102,20 @@ def update_lastUpdate(slack_id):
 
 BOXD_USERNAME_PATTERN = re.compile(r"^[a-zA-Z0-9_]{2,15}$")
 
+
+@app.command("/boxd-info")
+def boxd_infos(ack, respond, command):
+    ack()
+    
+    user = get_user(command['user_id'])
+    
+    if user is None:
+        respond("You need to link your Letterboxd account before using this\nUse: `/boxd-link [username]`")
+        return
+    
+    app.client.views_open(
+        trigger_id=command["trigger_id"], view=blocks.modal_info(user)
+    )
 
 @app.command("/boxd-events")
 def boxd_events(ack, respond, command):

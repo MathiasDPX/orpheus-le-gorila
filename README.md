@@ -18,7 +18,7 @@ services:
 ```
 
 ### TODO
-- [ ] Implement `/boxd-info` (see infos about you)
+- [x] Implement `/boxd-info` (see infos about you)
 - [x] Implement `/boxd-events` (toggle which events are sent)
 - [x] Implement `/boxd-toggle` (toggle orpheus)
 - [x] Implement `/boxd-link` (link Letterboxd to Orpheus)
