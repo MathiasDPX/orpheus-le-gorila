@@ -1,7 +1,6 @@
 import re
 import blocks
 import duckdb
-import traceback
 from utils import *
 from os import getenv
 from slack_bolt import App
@@ -150,7 +149,7 @@ def boxd_link(ack, respond, command):
         return
 
     boxdid = boxd_client.get_id_by_username(username)
-    if boxdid == None:
+    if boxdid is None:
         respond(f":alibaba-search: Couldn't find any username named `{username}`")
         return
 
@@ -168,8 +167,7 @@ def boxd_link(ack, respond, command):
         link_account(command["user_id"], boxdid)
         respond(f":hooray-wx: Successfully linked <@{slackid}> to `{username}`")
     except:
-        tb = traceback.format_exc()
-        respond(f":panic-wx: Unable to link your account!\n```{tb}```")
+        respond(f":panic-wx: Unable to link your account!")
 
 
 @app.action("events-change")
@@ -201,7 +199,7 @@ def boxd_toggle(ack, respond, command):
         respond("Letterboxd logging disabled")
     elif state == "on":
         boxd_id = get_boxd_by_slack(slackid)
-        if boxd_id == None:
+        if boxd_id is None:
             respond(
                 "Link your Letterboxd account before enabling logging\nUsing `/boxd-link [username]`"
             )
@@ -224,33 +222,33 @@ def post_activities():
         activities = boxd_client.get_activity(user[1])
 
         for activity in activities:
-            if activity.whenCreated < user[3]:
+            if activity.when_created < user[3]:
                 continue
 
             blocks_message = None
             text_message = None
             member = activity.member
             subscribed_events = user[4]
-            if type(activity) == FollowActivity and "FollowActivity" in subscribed_events:
-                text_message = f"{member.displayName} followed <https://letterboxd.com/{activity.followed.username}|{activity.followed.displayName}>"
+            if isinstance(activity, FollowActivity) and "FollowActivity" in subscribed_events:
+                text_message = f"{member.display_name} followed <https://letterboxd.com/{activity.followed.username}|{activity.followed.display_name}>"
                 blocks_message = blocks.from_mrkdwn(text_message)
 
-            elif type(activity) == WatchlistActivity and "WatchlistActivity" in subscribed_events:
+            elif isinstance(activity, WatchlistActivity) and "WatchlistActivity" in subscribed_events:
                 if activity.film.adult:
                     continue
 
-                filmName = activity.film.fullDisplayName or activity.film.name
-                text_message = f"{member.displayName} added {filmName} to {member.pronoun.possessivePronoun} watchlist"
+                filmName = activity.film.full_display_name or activity.film.name
+                text_message = f"{member.display_name} added {filmName} to {member.pronoun.possessivePronoun} watchlist"
                 blocks_message = blocks.from_mrkdwn(text_message)
 
-            elif type(activity) == DiaryEntryActivity and "DiaryEntryActivity" in subscribed_events:
+            elif isinstance(activity, DiaryEntryActivity) and "DiaryEntryActivity" in subscribed_events:
                 if activity.film.adult:
                     continue
 
-                text_message = f"{member.displayName} logged {activity.film.fullDisplayName or activity.film.name} ({activity.rating} stars)"
+                text_message = f"{member.display_name} logged {activity.film.full_display_name or activity.film.name} ({activity.rating} stars)"
                 blocks_message = blocks.from_diaryentry(activity)
 
-            if blocks_message == None:
+            if blocks_message is None:
                 continue
 
             app.client.chat_postMessage(

@@ -2,8 +2,18 @@
 Utility functions used across the project
 """
 
+from datetime import datetime
 from bs4 import BeautifulSoup
 
+
+def format_boxd_date(date: str):
+    """
+    Convert a Letterboxd date to a datetime date
+    
+    :param date: Date in Letterboxd format
+    :type date: str
+    """
+    return datetime.fromisoformat(date.replace("Z", "+00:00"))
 
 def star_to_text(rating: int):
     """
