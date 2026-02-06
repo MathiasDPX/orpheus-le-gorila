@@ -34,11 +34,11 @@ def from_diaryentry(activity: DiaryEntryActivity):
     liked = ":ms-red-heart: " if activity.like else ""
     stars = star_to_text(activity.rating)
 
-    film_name = film.fullDisplayName or film.name
+    film_name = film.full_display_name or film.name
 
     review = ""
     if activity.review is not None:
-        if activity.review.containsSpoilers:
+        if activity.review.contains_spoilers:
             review = "_This review contains spoilers_"
         else:
             review = "\n\n> " + html_to_mrkdwn(activity.review.text)
@@ -52,7 +52,7 @@ def from_diaryentry(activity: DiaryEntryActivity):
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": f"*{member.displayName} watched {film_name}*\n{liked} {stars}{review}",
+                "text": f"*{member.display_name} watched {film_name}*\n{liked} {stars}{review}",
             },
             "accessory": {
                 "type": "image",
