@@ -1,6 +1,7 @@
 import re
 import blocks
 import duckdb
+import random
 from utils import *
 from os import getenv
 from slack_bolt import App
@@ -52,13 +53,12 @@ def get_user(slack_id: str):
 
 def link_account(slack_id: str, boxd_username: str):
     with duckdb.connect(DB_PATH) as con:
+        # First, try to delete existing link if user is re-linking
+        con.execute("DELETE FROM accounts WHERE slack_id = ?", [slack_id])
+        
+        # Now insert the new link
         con.execute(
-            """
-            INSERT INTO accounts (slack_id, boxd_username)
-            VALUES (?, ?)
-            ON CONFLICT (slack_id)
-            DO UPDATE SET boxd_username = EXCLUDED.boxd_username
-            """,
+            "INSERT INTO accounts (slack_id, boxd_username) VALUES (?, ?)",
             [slack_id, boxd_username],
         )
 
@@ -166,8 +166,10 @@ def boxd_link(ack, respond, command):
     try:
         link_account(command["user_id"], boxdid)
         respond(f":hooray-wx: Successfully linked <@{slackid}> to `{username}`")
-    except:
-        respond(f":panic-wx: Unable to link your account!")
+    except duckdb.ConstraintException as e:
+        respond(f":panic-wx: Unable to link your account!\nSomeone is already linked to this Letterboxd")
+    except Exception as e:
+        respond(f":panic-wx: Unable to link your account!\n```{e}```")
 
 
 @app.action("events-change")
@@ -215,6 +217,28 @@ def boxd_toggle(ack, respond, command):
         respond(
             "Unknown command, make sure to use on or off\nExample: `/boxd-toggle on`"
         )
+        
+        
+@app.command("/boxd-roll")
+def boxd_roll(ack, respond, command):
+    ack()
+    slackid = command["user_id"]
+    
+    boxd_id = get_boxd_by_slack(slackid)
+    
+    if boxd_id == None:
+        respond(
+            "Link your Letterboxd account before doing this!\nUsing `/boxd-link [username]`"
+        )
+        return
+    
+    film_ids = boxd_client.get_watchlist(boxd_id)
+    film_id = random.choice(film_ids)
+    film = boxd_client.get_film(film_id)
+    
+    app.client.chat_postMessage(
+        channel=command["channel_id"], blocks=blocks.watchlist_pick(film), text=f"Picked {film.full_display_name}"
+    )
 
 
 def post_activities():

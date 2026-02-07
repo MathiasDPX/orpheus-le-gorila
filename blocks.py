@@ -3,9 +3,13 @@ Generate Slack blocks
 """
 
 import os
-from schemas import DiaryEntryActivity
+from schemas import DiaryEntryActivity, Film
 from utils import star_to_text, html_to_mrkdwn, shorten_text
 
+
+def get_url_id(film:Film):
+    # Some magic cuz sometime the sortingName isnt the name in the URL
+    return os.path.basename(film.links["letterboxd"].url.strip("/"))
 
 def from_mrkdwn(mrkdwn):
     """
@@ -44,8 +48,7 @@ def from_diaryentry(activity: DiaryEntryActivity):
             review = "\n\n> " + html_to_mrkdwn(activity.review.text)
             review = shorten_text(review)
 
-    # Some magic cuz sometime the sortingName isnt the name in the URL
-    sorting_name = os.path.basename(film.links["letterboxd"].url.strip("/"))
+    sorting_name = get_url_id(film)
 
     return [
         {
@@ -191,3 +194,13 @@ def modal_info(user):
             }
         ],
     }
+
+
+def watchlist_pick(film:Film):
+    return [{
+        "type": "section",
+        "text": {
+            "type": "mrkdwn",
+            "text": f":game_die: Picked *<https://letterboxd.com/film/{get_url_id(film)}|{film.full_display_name}>*"
+        }
+    }]

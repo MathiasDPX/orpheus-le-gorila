@@ -5,13 +5,13 @@ Provides OAuth2-authenticated access to Letterboxd member data, including
 activity feeds, member search, and profile information.
 """
 
-
 from authlib.integrations.requests_client import OAuth2Session
 from schemas import (
     AbstractActivity,
     WatchlistActivity,
     FollowActivity,
     DiaryEntryActivity,
+    Film,
 )
 
 
@@ -19,6 +19,7 @@ class LetterboxdClient:
     """
     Client for interacting with the Letterboxd API using OAuth2 authentication.
     """
+
     DEFAULT_BASEURL = "https://api.letterboxd.com/api/v0"
 
     def __init__(
@@ -30,7 +31,7 @@ class LetterboxdClient:
     ):
         """
         Initialize the Letterboxd API client with OAuth2 credentials.
-        
+
         :param client_id: OAuth2 client ID from Letterboxd API application
         :param client_secret: OAuth2 client secret from Letterboxd API application
         :param username: Letterboxd account username for authentication
@@ -54,7 +55,7 @@ class LetterboxdClient:
     def get_id_by_username(self, username):
         """
         Search for a Letterboxd member by username and return their ID.
-        
+
         :param username: The exact username to search for
         :return: Member ID if found, None otherwise
         :rtype: str or None
@@ -84,7 +85,7 @@ class LetterboxdClient:
     def get_member(self, boxd_id):
         """
         Retrieve detailed member information by member ID.
-        
+
         :param boxd_id: The Letterboxd member ID
         :return: Member data including profile information
         :rtype: dict
@@ -97,7 +98,7 @@ class LetterboxdClient:
     def get_activity(self, boxd_id) -> list[AbstractActivity]:
         """
         Fetch the activity feed for a member.
-        
+
         :param boxd_id: The Letterboxd member ID
         :return: List of activity objects
         :rtype: list[AbstractActivity]
@@ -120,6 +121,21 @@ class LetterboxdClient:
                 _activities.append(FollowActivity(**item))
 
         return _activities
+
+    def get_watchlist(self, boxd_id):
+        resp = self.oauth.get(
+            f"{self.baseurl}/member/{boxd_id}/watchlist", params={"perPage": 100}
+        )
+
+        return [film['id'] for film in resp.json()["items"]]
+
+
+    def get_film(self, film_id):
+        resp = self.oauth.get(
+            f"{self.baseurl}/film/{film_id}"
+        )
+        
+        return Film(resp.json())
 
 
 if __name__ == "__main__":
@@ -144,11 +160,9 @@ if __name__ == "__main__":
         member = activity.member
         if isinstance(activity, WatchlistActivity):
             print(
-                f"Added {activity.film.fullDisplayName or activity.film.name} to their watchlist"
+                f"Added {activity.film.full_display_name or activity.film.name} to their watchlist"
             )
         elif isinstance(activity, DiaryEntryActivity):
             print(
-                f"Rated {activity.film.fullDisplayName or activity.film.name} {activity.rating}⭐"
+                f"Rated {activity.film.full_display_name or activity.film.name} {activity.rating}⭐"
             )
-            if activity.review is not None:
-                print(activity.review.text)
