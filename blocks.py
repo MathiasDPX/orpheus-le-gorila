@@ -43,7 +43,7 @@ def from_diaryentry(activity: DiaryEntryActivity):
     review = ""
     if activity.review is not None:
         if activity.review.contains_spoilers:
-            review = "_This review contains spoilers_"
+            review = "\n\n> _This review contains spoilers_"
         else:
             review = "\n\n> " + html_to_mrkdwn(activity.review.text)
             review = shorten_text(review)
