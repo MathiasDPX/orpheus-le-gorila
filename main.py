@@ -243,6 +243,16 @@ def boxd_roll(ack, respond, command):
 @app.shortcut("delete_message")
 def delete_message(ack, body, logger):
     ack()
+    
+    metadata = body["message"].get("metadata")
+    
+    if metadata == None:
+        return
+    
+    if body["user"]["id"] == metadata["event_payload"].get("author_slack_id"):
+        app.client.chat_delete(
+            ts=body["message"]["ts"], channel=body["channel"]["id"]
+        )
 
 
 def post_activities():
