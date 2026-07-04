@@ -240,6 +240,10 @@ def boxd_roll(ack, respond, command):
         channel=command["channel_id"], blocks=blocks.watchlist_pick(film), text=f"Picked {film.full_display_name}"
     )
 
+@app.shortcut("delete_message")
+def delete_message(ack, body, logger):
+    ack()
+
 
 def post_activities():
     users = get_configured_users()
@@ -252,11 +256,17 @@ def post_activities():
 
             blocks_message = None
             text_message = None
+            metadatas = None
             member = activity.member
             subscribed_events = user[4]
             if isinstance(activity, FollowActivity) and "FollowActivity" in subscribed_events:
                 text_message = f"{member.display_name} followed <https://letterboxd.com/{activity.followed.username}|{activity.followed.display_name}>"
                 blocks_message = blocks.from_mrkdwn(text_message)
+                metadatas = {
+                    "author_boxd_id": activity.member.id,
+                    "author_slack_id": user[0],
+                    "following_boxd_id": activity.followed.id
+                }
 
             elif isinstance(activity, WatchlistActivity) and "WatchlistActivity" in subscribed_events:
                 if activity.film.adult:
@@ -265,6 +275,14 @@ def post_activities():
                 filmName = activity.film.full_display_name or activity.film.name
                 text_message = f"{member.display_name} added {filmName} to {member.pronoun.possessive_pronoun} watchlist"
                 blocks_message = blocks.from_mrkdwn(text_message)
+                metadatas = {
+                    "event_type": "WatchlistActivity",
+                    "event_payload": {
+                        "author_boxd_id": activity.member.id,
+                        "author_slack_id": user[0],
+                        "movie_id": activity.film.id
+                    }
+                }
 
             elif isinstance(activity, DiaryEntryActivity) and "DiaryEntryActivity" in subscribed_events:
                 if activity.film.adult:
@@ -272,12 +290,21 @@ def post_activities():
 
                 text_message = f"{member.display_name} logged {activity.film.full_display_name or activity.film.name} ({activity.rating} stars)"
                 blocks_message = blocks.from_diaryentry(activity)
+                metadatas = {
+                    "event_type": "DiaryEntryActivity",
+                    "event_payload": {
+                        "author_boxd_id": activity.member.id,
+                        "author_slack_id": user[0],
+                        "movie_id": activity.film.id
+                    }
+                }
 
             if blocks_message is None:
                 continue
 
             app.client.chat_postMessage(
-                channel=user[2], blocks=blocks_message, text=text_message
+                channel=user[2], blocks=blocks_message, text=text_message,
+                metadata=metadatas
             )
 
         update_lastUpdate(user[0])
